@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>ACE in Action</title>
+<style type="text/css" media="screen">
+    #editor { 
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+    }
+</style>
+</head>
+<body>
+
+<div id="editor"></div>
+
+<!-- <script src="http://rawgithub.com/ajaxorg/ace-builds/master/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script> -->
+<script src="ace/ace.js" type="text/javascript" charset="utf-8"></script>
+
+<script src="jquery-1.9.1.min.js" type="text/javascript" charset="utf-8"></script>
+
+<script src="./texlive.js/website/texlive.js" type="text/javascript" charset="utf-8"></script>
+<script src="./texlive.js/website/pdftex.js/release/pdftex.js" type="text/javascript" charset="utf-8"></script>
+
+<script>
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.getSession().setMode("ace/mode/latex");
+
+    function getTmpl() {
+      function reqListener () {
+        editor.setValue(this.responseText);
+      };
+       
+      var oReq = new XMLHttpRequest();
+      oReq.onload = reqListener;
+      oReq.open("get", "/template.tex", true);
+      oReq.send();
+    }
+
+    var downtime = null;
+    $('body').mousedown(function() {
+      downtime = new Date();
+    })
+
+    $('body').mouseup(function() {
+      root = '/texlive.js/website/';
+      root = 'http://manuels.github.io/texlive.js/website/';
+
+      var now = new Date();
+      var interval = 1000; // ms
+      if(now-downtime > interval) {
+        var code = editor.getValue();
+
+        var pdftex = new PDFTeX('/texlive.js/website/');
+        window.pdftex = pdftex;
+
+        pdftex.on_stdout = function(txt) { console.log(txt); }
+        pdftex.on_stderr = function(txt) { console.log(txt); }
+
+        var texlive = new TeXLive(pdftex);
+
+        var notification = navigator.mozNotification.createNotification(
+            "LaTeX is compiling...",
+            "This might take a minute"
+        );
+        notification.show();
+
+        texlive.compile(code, root, function(pdf) {
+          var notification = navigator.mozNotification.createNotification(
+              "Compiling LaTeX done!",
+              "Click to show PDF"
+          );
+          notification.show();
+          notification.onclick = function() {
+            window.open('data:application/pdf;base64,'+window.btoa(pdf));
+          };
+        });
+      }
+    })
+
+    getTmpl();
+
+
+</script>
+</body>
+</html>
